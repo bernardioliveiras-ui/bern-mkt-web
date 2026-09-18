@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bern-mkt-web",
+  "compatibility_date": "2026-09-18",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "./worker.ts",
+  "preview_urls": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bern-mkt-web",
+      "database_id": "COLE-O-ID-DO-D1-AQUI",
+      "migrations_dir": "migrations"
+    }
+  ]
+}
