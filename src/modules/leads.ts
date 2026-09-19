@@ -11,10 +11,12 @@ export type LeadInput = z.infer<typeof leadInputSchema>;
 
 export const LEAD_STATUSES = [
   'NOVO',
+  'EM_CONTATO',
   'WHATSAPP_ENVIADO',
   'PDF_ENVIADO',
   'DEMO_MARCADA',
   'DEMO_FEITA',
+  'PROPOSTA',
   'FECHADO',
   'PERDIDO',
 ] as const;

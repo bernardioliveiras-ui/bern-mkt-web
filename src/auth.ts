@@ -1,11 +1,13 @@
 import bcrypt from 'bcryptjs';
-import type { Role } from '@/lib/access';
+import { getRoles, type Role } from '@/lib/access';
 
 export type SessionUser = {
   id: number;
   name: string;
   username: string;
   role: Role;
+  roles?: Role[];
+  must_change_password?: number;
 };
 
 type UserRow = SessionUser & {
@@ -31,7 +33,7 @@ async function sha256(value: string): Promise<string> {
 
 export async function login(db: D1Database, username: string, password: string): Promise<{ user: SessionUser; cookie: string } | null> {
   const user = await db
-    .prepare('SELECT id, name, username, password_hash, role, status FROM users WHERE username = ? LIMIT 1')
+    .prepare('SELECT id, name, username, password_hash, role, status, must_change_password FROM users WHERE username = ? LIMIT 1')
     .bind(username.trim())
     .first<UserRow>();
 
@@ -48,7 +50,7 @@ export async function login(db: D1Database, username: string, password: string):
     .run();
 
   const cookie = `${COOKIE_NAME}=${encodeURIComponent(token)}; HttpOnly; Path=/; SameSite=Lax; Secure; Max-Age=${SESSION_TTL_SECONDS}`;
-  return { user: { id: user.id, name: user.name, username: user.username, role: user.role }, cookie };
+  return { user: { id: user.id, name: user.name, username: user.username, role: user.role, roles: await getRoles(db, user), must_change_password: user.must_change_password }, cookie };
 }
 
 export async function getSessionUser(request: Request, db: D1Database): Promise<SessionUser | null> {
@@ -56,9 +58,9 @@ export async function getSessionUser(request: Request, db: D1Database): Promise<
   if (!token) return null;
 
   const tokenHash = await sha256(token);
-  return db
+  const user = await db
     .prepare(
-      `SELECT users.id, users.name, users.username, users.role
+      `SELECT users.id, users.name, users.username, users.role, users.must_change_password
        FROM sessions
        JOIN users ON users.id = sessions.user_id
        WHERE sessions.token_hash = ? AND sessions.expires_at > CURRENT_TIMESTAMP AND users.status = 'ATIVO'
@@ -66,6 +68,7 @@ export async function getSessionUser(request: Request, db: D1Database): Promise<
     )
     .bind(tokenHash)
     .first<SessionUser>();
+  return user ? { ...user, roles: await getRoles(db, user) } : null;
 }
 
 export async function logout(request: Request, db: D1Database): Promise<string> {
