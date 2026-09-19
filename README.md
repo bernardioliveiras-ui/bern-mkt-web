@@ -28,7 +28,14 @@ Root directory:
 /
 ```
 
-Não use `npx wrangler deploy` como comando de deploy neste projeto.
+Este pacote agora roda como Cloudflare Worker puro em TypeScript. No log correto do Cloudflare, o build deve mostrar:
+
+```txt
+> bern-mkt-web@0.1.0 build
+> tsc --noEmit
+```
+
+Se aparecer `vinext build`, o GitHub ainda está com a versão antiga.
 
 ## D1
 
@@ -45,6 +52,8 @@ Depois aplique as migrations:
 ```powershell
 npm run db:migrate
 ```
+
+Se quiser aplicar pelo painel da Cloudflare, abra o D1, entre no console/studio do banco e cole o conteúdo de `migrations/0001_initial.sql`.
 
 ## Criar acesso pelo PowerShell
 

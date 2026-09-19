@@ -1,0 +1,70 @@
+CREATE TABLE users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  username TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'ATIVO',
+  must_change_password INTEGER NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE sessions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at DATETIME NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE leads (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  whatsapp TEXT NOT NULL,
+  segment TEXT NOT NULL,
+  message TEXT NULL,
+  origin TEXT NOT NULL DEFAULT 'landing',
+  status TEXT NOT NULL DEFAULT 'NOVO',
+  assigned_to_user_id INTEGER NULL,
+  demo_at DATETIME NULL,
+  notes TEXT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (assigned_to_user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  area TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  responsible_user_id INTEGER NULL,
+  priority TEXT NOT NULL DEFAULT 'MEDIA',
+  status TEXT NOT NULL,
+  due_date DATE NULL,
+  target_version TEXT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (responsible_user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE sales (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  lead_id INTEGER NULL,
+  client_name TEXT NOT NULL,
+  plan_name TEXT NOT NULL,
+  device_count INTEGER NOT NULL DEFAULT 1,
+  amount_cents INTEGER NOT NULL DEFAULT 0,
+  payment_status TEXT NOT NULL DEFAULT 'PENDENTE',
+  license_status TEXT NOT NULL DEFAULT 'PENDENTE',
+  sold_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  notes TEXT NULL,
+  FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE SET NULL
+);
+
+CREATE INDEX idx_users_role ON users(role, status);
+CREATE INDEX idx_leads_status ON leads(status, created_at);
+CREATE INDEX idx_tasks_area_status ON tasks(area, status);
+CREATE INDEX idx_sales_payment ON sales(payment_status, sold_at);
