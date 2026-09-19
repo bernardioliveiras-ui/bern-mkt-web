@@ -6,6 +6,7 @@ interface D1PreparedStatement {
 }
 
 interface D1Database {
+  batch(statements: D1PreparedStatement[]): Promise<{ success: boolean; meta: Record<string, unknown> }[]>;
   prepare(query: string): D1PreparedStatement;
 }
 

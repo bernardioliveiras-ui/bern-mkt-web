@@ -1,87 +1,41 @@
-# BERN MKT Web
+# BERN MKT Web — CRM v0.2.1
 
-Landing SEO e painel interno para operação comercial do BERN MKT.
+Landing reformulada + gestão interna por setores. Prévia disponível em PREVIA-LANDING.html.
 
-## O que tem
+Comece por **LEIA-PRIMEIRO.md**. No Windows, execute **ATUALIZAR-CRM.bat**.
 
-- Landing pública com o topo `BERN MKT` e botão `Acesse Portal`.
-- Hero com `Trabalhe de forma inteligente`.
-- Espaço reservado para VSL.
-- Formulário público para capturar leads.
-- Portal interno em `/entrar`.
-- Painel com Comercial, Marketing, Desenvolvimento, Financeiro e Usuários.
-- Financeiro e usuários pensados para acesso Owner.
-- Script PowerShell para criar acessos no D1.
+Recursos: usuários com múltiplas áreas, cadastro/edição/desativação/exclusão pelo proprietário, solicitações aos setores, tarefas internas, comentários, histórico, progresso, aprovação, visão por setor e fichas comerciais com retorno e demonstração.
 
-## Cloudflare
+## Desenvolvimento
 
-Use no Workers Builds:
+Node >=22.13.0.
 
-```txt
-Build command:
+```sh
+npm ci
+npm run db:update:local
+npm run dev
+```
+
+## Atualização existente
+
+```sh
 npm run build
-
-Deploy command:
+npm run db:update
 npm run deploy
-
-Root directory:
-/
 ```
 
-Este pacote agora roda como Cloudflare Worker puro em TypeScript. No log correto do Cloudflare, o build deve mostrar:
+O atualizador verifica o schema real, preserva os dados e exporta uma cópia antes de aplicar a migração. Não reaplique `0001_initial.sql` em banco já existente. Não misture execução manual das migrações com o mecanismo antigo `d1 migrations apply`.
 
-```txt
-> bern-mkt-web@0.1.0 build
-> tsc --noEmit
-```
+## Cloudflare / GitHub
 
-Se aparecer `vinext build`, o GitHub ainda está com a versão antiga.
+Build command: `npm run build`
+Deploy command: `npm run deploy`
+Root directory: `/`
+Entry point: `src/worker.ts`
+Binding do banco: `DB`
 
-## D1
+Atualize o banco antes de publicar. Sincronize o repositório externo para que o próximo deploy não restaure a versão antiga.
 
-Crie o banco:
+## Verificações
 
-```powershell
-npx wrangler d1 create bern-mkt-web
-```
-
-Cole o `database_id` retornado no `wrangler.jsonc`.
-
-Depois aplique as migrations:
-
-```powershell
-npm run db:migrate
-```
-
-Se quiser aplicar pelo painel da Cloudflare, abra o D1, entre no console/studio do banco e cole o conteúdo de `migrations/0001_initial.sql`.
-
-## Criar acesso pelo PowerShell
-
-Depois de `npm install` e `npx wrangler login`:
-
-```powershell
-.\scripts\criar-acesso.ps1 -Nome "Guedes" -Usuario "guedes" -Senha "Senha@2026" -Perfil OWNER
-```
-
-Perfis aceitos:
-
-```txt
-OWNER
-ADMIN_COMERCIAL
-ADMIN_MARKETING
-ADMIN_DESENVOLVIMENTO
-```
-
-Para banco local:
-
-```powershell
-.\scripts\criar-acesso.ps1 -Nome "Teste" -Usuario "teste" -Senha "Senha@2026" -Perfil ADMIN_COMERCIAL -Local
-```
-
-## Validação local
-
-```bash
-npm test
-npm run typecheck
-npm run build
-```
+`npm test` executa os testes de permissões, fluxos HTTP, migração, tarefas, usuários, captura e acompanhamento de leads. `npm run build` verifica TypeScript. Testes de integração usam SQLite real em memória com adaptador D1; não acessam produção.
