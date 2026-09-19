@@ -19,6 +19,7 @@ export const LEAD_STATUSES = [
   'PROPOSTA',
   'FECHADO',
   'PERDIDO',
+  'NAO_CONTATAR',
 ] as const;
 
 export function validateLeadInput(input: unknown) {

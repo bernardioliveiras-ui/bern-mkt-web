@@ -1,9 +1,11 @@
+import {parseContactCsv,normalizePhone,saveImportChunk} from '@/modules/import-leads';
+import { brandAsset } from '@/brand';
 import bcrypt from 'bcryptjs';
 import { login, logout, getSessionUser, type SessionUser } from '@/auth';
 import { canAccess, isOwner, ROLES, type Role, type ModuleName } from '@/lib/access';
 import { validateLeadInput, isLeadStatus } from '@/modules/leads';
 import { AREAS, getStatusesForArea, moduleForArea, isDone, listMembers, type TaskArea, type TaskRow } from '@/modules/tasks';
-import { commercialPage, dashboardPage, financePage, landingResponse, loginPage, taskPage, taskDetailPage, usersPage, passwordPage, leadDetailPage, errorPage } from '@/pages';
+import { importLeadsPage, commercialPage, dashboardPage, financePage, landingResponse, loginPage, taskPage, taskDetailPage, usersPage, passwordPage, leadDetailPage, errorPage } from '@/pages';
 
 function redirect(location: string, headers?: Record<string,string>): Response {
   return new Response(null, { status:302, headers:{Location:location,...headers} });
@@ -120,12 +122,13 @@ async function updateTask(request:Request,env:Env,user:SessionUser,id:number,com
 async function updateLead(request:Request,env:Env,user:SessionUser,id:number):Promise<Response>{
  const lead=await env.DB.prepare('SELECT * FROM leads WHERE id=?').bind(id).first<Record<string,any>>();check(lead,'Lead não encontrado.',404);
  const input=await readInput(request),status=str(input,'status');check(isLeadStatus(status),'Etapa inválida.');
+ const name=input.name===undefined?lead.name:text(input,'name',100,true);
  const loss=text(input,'loss_reason',500);check(status!=='PERDIDO'||loss.length>0,'Informe o motivo da perda.');
- const assigned=await assignee(env.DB,'COMERCIAL',input,'assigned_to_user_id'),demo=date(input,'demo_at',true),next=date(input,'next_contact_at',true),notes=text(input,'notes',10000);
+ const assigned=await assignee(env.DB,'COMERCIAL',input,'assigned_to_user_id'),demo=date(input,'demo_at',true),next=status==='NAO_CONTATAR'?null:date(input,'next_contact_at',true),notes=text(input,'notes',10000);
  check(status!=='DEMO_MARCADA'||demo,'Informe a data e o horário da demonstração.');
  const version=str(input,'version');check(!version||Number(version)===lead.version,'Este lead mudou. Reabra antes de salvar.',409);
  const result=await env.DB.batch([
- env.DB.prepare('UPDATE leads SET status=?,assigned_to_user_id=?,demo_at=?,next_contact_at=?,notes=?,loss_reason=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=? AND version=?').bind(status,assigned,demo,next,notes,loss,id,lead.version),
+ env.DB.prepare('UPDATE leads SET name=?,status=?,assigned_to_user_id=?,demo_at=?,next_contact_at=?,notes=?,loss_reason=?,updated_at=CURRENT_TIMESTAMP,version=version+1 WHERE id=? AND version=?').bind(name,status,assigned,demo,next,notes,loss,id,lead.version),
  env.DB.prepare('INSERT INTO lead_events (lead_id,actor_user_id,actor_name,body) SELECT ?,?,?,? WHERE changes()=1').bind(id,user.id,user.name,`Etapa: ${status}. Responsável: ${assigned?(await listMembers(env.DB,'COMERCIAL')).find(u=>u.id===assigned)?.name:'Não atribuído'}. Demonstração: ${demo||'—'}. Retorno: ${next||'—'}. ${loss?'Motivo: '+loss+'. ':''}Notas: ${notes||'—'}`)]);
  check(Number(result[0].meta.changes)===1,'Outra pessoa atualizou este lead. Recarregue.',409);return redirect('/painel/leads/'+id);
 }
@@ -134,6 +137,30 @@ async function route(request:Request,env:Env):Promise<Response>{
  if(request.method==='POST'){
   const origin=request.headers.get('origin');check(!origin||origin===url.origin,'Origem da solicitação não permitida.',403);
   check(request.headers.get('sec-fetch-site')!=='cross-site','Origem da solicitação não permitida.',403);
+ }
+ if(request.method==='GET'){const asset=brandAsset(path);if(asset)return asset;}
+ if(path==='/painel/comercial/importar'||path==='/api/leads/import/preview'||path==='/api/leads/import/commit'){
+  const user=await requireUser(request,env,'comercial');if(user instanceof Response)return user;
+  if(request.method==='GET'&&path==='/painel/comercial/importar')return importLeadsPage(env.DB,user);
+  check(request.method==='POST','Método não permitido.',405);
+  const reader=request.body?.getReader();check(reader,'Envie uma lista.');let size=0;const chunks:Uint8Array[]=[];
+  while(true){const part=await reader.read();if(part.done)break;size+=part.value.length;if(size>300000){await reader.cancel();throw new HttpError(413,'Use um arquivo de até 250 KB.');}chunks.push(part.value);}
+  const bytes=new Uint8Array(size);let pos=0;for(const c of chunks){bytes.set(c,pos);pos+=c.length;}
+  const bounded=new Request(request.url,{method:'POST',headers:request.headers,body:bytes});
+  if(path.endsWith('/preview')){
+   const form=await bounded.formData(),file=form.get('file'),pasted=String(form.get('csv')||'');
+   check(!(file instanceof File&&file.size&&pasted.trim()),'Escolha arquivo ou texto colado.');
+   let csv=pasted;if(file instanceof File&&file.size){check(file.size<=250000,'Use um arquivo de até 250 KB.');const data=await file.arrayBuffer();try{csv=new TextDecoder('utf-8',{fatal:true}).decode(data);}catch{csv=new TextDecoder('windows-1252').decode(data);}}
+   const input:Input={list:String(form.get('list')||''),segment:String(form.get('segment')||''),assigned_to_user_id:String(form.get('assigned_to_user_id')||'')};
+   const list=text(input,'list',80,true),segment=text(input,'segment',80,true);await assignee(env.DB,'COMERCIAL',input,'assigned_to_user_id');
+   let parsed;try{parsed=parseContactCsv(csv);}catch(error){throw new HttpError(400,error instanceof Error?error.message:'CSV inválido.');}
+   return importLeadsPage(env.DB,user,parsed,list,segment,str(input,'assigned_to_user_id'));
+  }
+  let input:any;try{input=await bounded.json();}catch{throw new HttpError(400,'Dados inválidos.');}
+  check(input&&Array.isArray(input.contacts)&&input.contacts.length>0&&input.contacts.length<=20,'Envie até 20 contatos por lote.');
+  const list=text(input,'list',80,true),segment=text(input,'segment',80,true),assigned=await assignee(env.DB,'COMERCIAL',input,'assigned_to_user_id');
+  const contacts=input.contacts.map((c:any)=>{check(c&&typeof c.phone==='string'&&typeof c.name==='string','Contato inválido.');const phone=normalizePhone(c.phone),name=c.name.trim();check(phone&&name.length>0&&name.length<=100,'Nome ou telefone inválido.');return {phone,name};});
+  return json(await saveImportChunk(env.DB,contacts,list,segment,assigned));
  }
  if(request.method==='GET'&&path==='/')return landingResponse(url);
  if(request.method==='GET'&&path==='/entrar')return loginPage(url.searchParams.get('erro')==='1');
@@ -168,6 +195,20 @@ async function route(request:Request,env:Env):Promise<Response>{
   if(request.method==='POST'&&path==='/api/tasks')return handleTask(request,env,user);
   const match=path.match(/^\/api\/tasks\/(\d+)\/(update|comments)$/);if(request.method==='POST'&&match)return updateTask(request,env,user,Number(match[1]),match[2]==='comments');
  }
+ const deleteLeadMatch=path.match(/^\/api\/leads\/(\d+)\/delete$/);
+ if(deleteLeadMatch){
+  const user=await requireUser(request,env,'comercial');if(user instanceof Response)return user;
+  check(request.method==='POST','Método não permitido.',405);
+  const id=Number(deleteLeadMatch[1]),input=await readInput(request);
+  check(str(input,'confirmation')==='EXCLUIR','Digite EXCLUIR para confirmar.');
+  const version=str(input,'version');check(/^\d+$/.test(version),'Reabra a ficha antes de excluir.');
+  const lead=await env.DB.prepare('SELECT id,version FROM leads WHERE id=?').bind(id).first<{id:number;version:number}>();
+  check(lead,'Lead não encontrado.',404);
+  check(lead.version===Number(version),'Este lead mudou. Reabra a ficha antes de excluir.',409);
+  const result=await env.DB.prepare('DELETE FROM leads WHERE id=? AND version=?').bind(id,Number(version)).run();
+  check(Number(result.meta.changes)===1,'Este lead mudou. Reabra a ficha antes de excluir.',409);
+  return redirect('/painel/comercial?deleted=1');
+ }
  const leadMatch=path.match(/^\/(api|painel)\/leads\/(\d+)$/);
  if(leadMatch){
   const user=await requireUser(request,env,'comercial');if(user instanceof Response)return user;
@@ -197,7 +238,7 @@ export default {
    else{console.error(e instanceof Error?e.message:'Falha no servidor');response=errorPage('Não foi possível concluir agora. Tente novamente em instantes. Se o problema continuar, fale com o responsável pelo portal.',500);}
   }
   response.headers.set('X-Content-Type-Options','nosniff');response.headers.set('Referrer-Policy','same-origin');response.headers.set('X-Frame-Options','DENY');
-  if(new URL(request.url).pathname!=='/')response.headers.set('Cache-Control','no-store');
+  if(!['/','/brand-v022.png','/favicon-v022.svg','/favicon-v024.png','/favicon.png','/favicon.ico'].includes(new URL(request.url).pathname))response.headers.set('Cache-Control','no-store');
   return response;
  }
 };
