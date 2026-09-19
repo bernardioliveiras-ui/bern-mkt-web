@@ -1,4 +1,22 @@
-# BERN CRM v0.2.1 — atualização do projeto existente
+# BERN CRM v0.2.2
+
+Logo original na LP, no login e no painel. Favicon com apenas o leão, sem letras. O bloco “Últimas atualizações” e sua consulta foram retirados da visão geral. Os históricos individuais foram preservados. Não há nova migração nesta versão.
+
+## Erro 1102 no login — diagnóstico pendente na conta
+
+O login usa bcryptjs para verificar as senhas existentes. Na medição local com custo 12, uma senha incorreta consumiu aproximadamente 366 ms de CPU. Esse número não é uma medição do servidor de produção. O Workers Free permite 10 ms de CPU por requisição; o erro pode ocorrer antes de responder “senha inválida”. Remover o bloco do painel não corrige o processamento do login.
+
+Esta versão habilita observabilidade. Após publicar, abra os registros do Worker no Cloudflare, reproduza o erro e confira o resultado (exceededCpu ou exceededMemory), o tempo de CPU e o plano Workers da conta. Compartilhe somente esses dados, sem senhas ou cookies.
+
+Se confirmado exceededCpu no plano Free, manter o bcrypt atual exige hospedagem com orçamento de CPU compatível (por exemplo Workers Paid, com cobrança) ou mudança da arquitetura de autenticação. Não reduzimos o custo das senhas, não redefinimos contas e não ativamos plano pago. O erro 1102 ainda não está corrigido nem validado remotamente.
+
+Referência: https://developers.cloudflare.com/workers/platform/limits/
+
+## Publicação pelo GitHub
+
+Envie o CONTEÚDO da pasta extraída para a raiz usada pela compilação. package.json, wrangler.jsonc e src devem estar no mesmo nível do projeto anterior. Confirme versão 0.2.2 em package.json e presença de src/brand.ts e src/landing.ts. O build é npm run build e a publicação é npm run deploy. Enviar uma pasta dentro do repositório pode deixar a compilação apontando para os arquivos antigos.
+
+## Instruções de atualização
 
 ## Nova landing page
 

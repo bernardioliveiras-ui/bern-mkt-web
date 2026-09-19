@@ -2,7 +2,9 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "bern-mkt-web",
   "compatibility_date": "2026-09-18",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "main": "./src/worker.ts",
   "preview_urls": true,
   "d1_databases": [
@@ -12,5 +14,8 @@
       "database_id": "2992456d-c820-4358-98cc-413c746d3907",
       "migrations_dir": "migrations"
     }
-  ]
+  ],
+  "observability": {
+    "enabled": true
+  }
 }
