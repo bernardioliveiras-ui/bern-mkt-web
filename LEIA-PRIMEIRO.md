@@ -1,3 +1,43 @@
+# BERN CRM v0.2.4 — excluir lead e favicon
+
+Publique o pacote completo. No GitHub envie o conteúdo da pasta na raiz que já contém package.json (versão 0.2.4), src e wrangler.jsonc. Alternativamente execute ATUALIZAR-CRM.bat na pasta extraída.
+
+## Excluir lead
+
+Comercial → Atender → Excluir lead → digitar EXCLUIR → Excluir definitivamente. Funciona para formulário e lista fria. Proprietário e usuários com acesso ao Comercial podem excluir. O cadastro e seu histórico são apagados definitivamente; vendas existentes são preservadas sem vínculo com o lead. Uma ficha alterada por outra pessoa precisa ser reaberta antes de excluir.
+
+O número excluído pode voltar por nova importação ou formulário. Para manter a orientação de não abordar, conserve o cadastro em Não contatar.
+
+## Ícone do leão
+
+Favicon PNG de 64 pixels com endereço novo e fallback /favicon.ico com tamanhos 16, 32, 48 e 64. Renderizado a partir do recorte SVG da logo original. Sem letras. Depois de publicar, feche a aba e reabra o site. O navegador pode guardar o favicon antigo; teste também uma janela anônima. Abrir /favicon-v024.png no seu domínio deve mostrar o leão; se não aparecer, confirme que o deploy publicou a versão 0.2.4.
+
+Não há nova migração. Todas as funções anteriores estão incluídas. O erro 1102 do login no plano gratuito permanece pendente, conforme combinado.
+
+# BERN CRM v0.2.3 — listas frias no Comercial
+
+## Importar
+
+1. Publique esta versão usando ATUALIZAR-CRM.bat ou atualize os arquivos na raiz do GitHub conectado ao Cloudflare. Confirme 0.2.3 no package.json.
+2. Entre com proprietário ou Comercial e clique em **Comercial → Importar lista**.
+3. Dê um nome à lista, informe o segmento e escolha um responsável (opcional).
+4. Selecione o CSV ou cole os telefones. Use uma opção por vez.
+5. Clique em **Revisar lista**, confira os nomes, telefones e linhas rejeitadas. Nada é salvo nessa etapa.
+6. Clique em **Confirmar importação**. Aguarde o resumo de novos contatos e números já cadastrados.
+7. No Comercial, filtre **Origem → Prospecção fria**, e use o nome exato da lista para localizar seu lote.
+
+Aceita CSV com Nome,Numero, nomes opcionais, cabeçalho Telefone/WhatsApp/Celular ou uma única coluna de números sem cabeçalho. Vírgula, ponto e vírgula e tabulação são aceitos. UTF-8 e Windows-1252 são lidos. Não aceita o arquivo Excel .xlsm diretamente: exporte a aba em CSV, como na amostra enviada.
+
+Use DDD. O importador padroniza telefones brasileiros com 55, mantém DDDs diferentes e gera Contato + últimos quatro dígitos quando o nome está vazio. Validação de formato não confirma linha ativa ou WhatsApp. Limite por arquivo: 1.000 linhas / 250 KB. Para listas maiores, divida o arquivo.
+
+O salvamento usa lotes de 20. Se interromper, lotes já confirmados permanecem; reimportar ignora números existentes. Contatos anteriores não recebem novos nomes, responsáveis, etapas ou anotações. Números existentes permanecem na lista/origem anterior. Um contato pertence à sua origem inicial; esta versão não cria múltiplas associações de listas.
+
+A importação não envia mensagens nem faz ligações. Na ficha, atualize nome, responsável, etapa e retorno. **Não contatar** oculta ações de ligação/WhatsApp e retira o contato da fila de retornos; novas importações não sobrescrevem seu cadastro. Os históricos continuam preservados.
+
+Não há nova migração de banco em relação à v0.2.2. O login atual foi mantido por sua escolha; o erro 1102 do Workers Free permanece pendente. Esta atualização não foi publicada remotamente por nós.
+
+A amostra enviada foi lida pelo mesmo importador: 186 contatos aceitos, nenhum repetido ou fora do formato. O CSV pessoal não está embutido no código, no ZIP nem enviado ao banco; selecione-o no painel para importar.
+
 # BERN CRM v0.2.2
 
 Logo original na LP, no login e no painel. Favicon com apenas o leão, sem letras. O bloco “Últimas atualizações” e sua consulta foram retirados da visão geral. Os históricos individuais foram preservados. Não há nova migração nesta versão.

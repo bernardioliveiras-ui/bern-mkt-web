@@ -12,3 +12,15 @@
 - Landing isolada em src/landing.ts. Prévia HTML local incluída. Nenhuma nova migração em relação à v0.2.0.
 
 - v0.2.2: logo original servida por rota própria, favicon SVG recorta os pixels do leão; consulta do feed removida. Erro 1102 não corrigido: depende de confirmar CPU/plano nos registros de produção.
+
+## v0.2.3
+- 33 testes em 10 arquivos e TypeScript aprovados localmente.
+- Amostra real: 186 linhas aceitas pelo parser. Não importada em produção.
+- Testes cobrem revisão sem gravação, escapes de HTML/script, autorização Comercial, rejeição integral de lote inválido, reimportação idempotente, preservação de dados e não contatar.
+- Nenhuma nova migração; publicação e CPU em Workers Free não validadas remotamente.
+
+## v0.2.4
+- 36 testes em 10 arquivos e TypeScript aprovados.
+- Exclusão testada nas duas origens, histórico removido, vendas preservadas, permissão/confirmacão/versão verificadas.
+- PNG e ICO públicos testados por cabeçalho e assinatura binária; leão renderizado e inspecionado visualmente em 64 pixels.
+- Publicação remota e cache do navegador do usuário não verificados.

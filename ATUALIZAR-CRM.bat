@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-echo BERN CRM - Atualizacao v0.2.2
+echo BERN CRM - Atualizacao v0.2.4
 where node >nul 2>nul
 if errorlevel 1 goto erro
 call npm.cmd ci
